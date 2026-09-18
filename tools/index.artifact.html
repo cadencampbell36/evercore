@@ -1,0 +1,139 @@
+<title>Evercore Prep Suite</title>
+<style>
+:root{
+  --ground:#f4f1e8; --panel:#efebdf; --ink:#102040; --ink2:#38486b; --ink3:#6e7c99;
+  --navy:#1a2744; --rule:#c9c2ae; --rule2:#b3aa92; --hair:#d8d2c0;
+  --ok:#1f5c3d; --bad:#8c2222; --warn:#8a5a10; --sel:#e4dfcd;
+  --s1:4px; --s2:8px; --s3:16px; --s4:24px; --s5:48px;
+  --serif:"Times New Roman",Times,Tinos,"Liberation Serif",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#12192b; --panel:#182238; --ink:#e8e4d6; --ink2:#b3bccf; --ink3:#7d89a3;
+  --navy:#dfe6f2; --rule:#2c3852; --rule2:#3d4b6b; --hair:#242f47;
+  --ok:#6fbf8e; --bad:#e08b8b; --warn:#d9ad5e; --sel:#1d2740;
+}}
+:root[data-theme="dark"]{
+  --ground:#12192b; --panel:#182238; --ink:#e8e4d6; --ink2:#b3bccf; --ink3:#7d89a3;
+  --navy:#dfe6f2; --rule:#2c3852; --rule2:#3d4b6b; --hair:#242f47;
+  --ok:#6fbf8e; --bad:#e08b8b; --warn:#d9ad5e; --sel:#1d2740;
+}
+*{box-sizing:border-box;border-radius:0!important}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--serif);
+  font-size:19px;line-height:1.6;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font-family:var(--serif);font-size:inherit;color:inherit}
+h1,h2,h3{font-weight:700;margin:0;text-wrap:balance;line-height:1.25}
+h1{font-size:30px} h2{font-size:24px} h3{font-size:19px}
+a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+#app{display:flex;min-height:100%;align-items:stretch}
+#side{width:246px;flex:0 0 246px;border-right:1px solid var(--rule);padding:var(--s4) 0 var(--s5);
+  background:var(--panel);position:sticky;top:env(safe-area-inset-top,0px);align-self:flex-start;
+  max-height:100vh;overflow-y:auto}
+#main{flex:1;min-width:0;padding:var(--s4) var(--s3) var(--s5)}
+.wrap{max-width:760px;margin:0 auto}
+.lbl{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);
+  padding:0 var(--s3);margin:var(--s4) 0 var(--s2)}
+.lbl:first-child{margin-top:0}
+.nav{display:block;width:100%;text-align:left;background:none;border:0;padding:5px var(--s3);
+  cursor:pointer;color:var(--ink2);border-left:3px solid transparent}
+.nav:hover{color:var(--ink);background:var(--sel)}
+.nav[aria-current="true"]{color:var(--ink);font-weight:700;border-left-color:var(--navy);background:var(--sel)}
+.nav .ct{float:right;color:var(--ink3);font-weight:400;font-size:15px}
+.brand{padding:0 var(--s3) var(--s3);border-bottom:1px solid var(--rule);margin-bottom:var(--s3)}
+.brand h1{font-size:24px;letter-spacing:-.01em}
+.brand p{margin:var(--s1) 0 0;font-size:15px;color:var(--ink3)}
+
+button.b{background:var(--navy);color:var(--ground);border:1px solid var(--navy);
+  padding:7px 18px;cursor:pointer}
+button.b:hover{opacity:.87} button.b:disabled{opacity:.35;cursor:not-allowed}
+button.g{background:none;color:var(--ink);border:1px solid var(--rule2);padding:7px 18px;cursor:pointer}
+button.g:hover{background:var(--sel)} button.g:disabled{opacity:.35;cursor:not-allowed}
+input[type=text],input[type=number],input[type=date],textarea,select{
+  background:var(--ground);border:1px solid var(--rule2);padding:6px 9px;width:100%}
+textarea{line-height:1.6;resize:vertical}
+hr{border:0;border-top:1px solid var(--hair);margin:var(--s4) 0}
+hr.hv{border-top:3px solid var(--navy);margin:var(--s4) 0}
+.mut{color:var(--ink3);font-size:15px}
+.mut2{color:var(--ink2);font-size:18px}
+.stem{max-width:62ch;font-size:19px}
+.ansbox{max-width:66ch;font-size:18px;line-height:1.65}
+.row{display:flex;gap:var(--s3);flex-wrap:wrap;align-items:center}
+.sb{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3)}
+table{border-collapse:collapse;width:100%;font-size:18px}
+th,td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--hair);vertical-align:top}
+th{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);font-weight:400}
+.num{text-align:right}
+.tag{display:inline-block;font-size:15px;border:1px solid var(--rule2);padding:1px 7px;color:var(--ink2)}
+.ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+.opt{display:block;width:100%;text-align:left;background:var(--ground);border:1px solid var(--rule2);
+  padding:10px 14px;margin-bottom:var(--s2);cursor:pointer;max-width:62ch}
+.opt:hover{background:var(--sel)}
+.opt.pick{border-color:var(--navy);border-width:2px;padding:9px 13px}
+.opt.right{border-color:var(--ok);border-width:2px;padding:9px 13px}
+.opt.wrong{border-color:var(--bad);border-width:2px;padding:9px 13px}
+.bigbtn{flex:1;min-width:160px;padding:26px 14px;font-size:24px;background:var(--ground);
+  border:1px solid var(--rule2);cursor:pointer}
+.bigbtn:hover{background:var(--sel);border-color:var(--navy)}
+.meter{height:8px;background:var(--hair);border:1px solid var(--rule2);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--navy)}
+.score{font-size:37px;font-weight:700;line-height:1}
+.obj{border-left:3px solid var(--navy);padding:var(--s2) 0 var(--s2) var(--s3);margin:var(--s3) 0;
+  max-width:62ch;font-size:18px}
+.banner{border:1px solid var(--warn);border-left-width:3px;padding:var(--s2) var(--s3);
+  margin-bottom:var(--s3);color:var(--warn);font-size:18px;max-width:66ch}
+.gridtbl input[type=number]{width:96px;padding:3px 6px}
+.gridtbl select{width:auto;padding:3px 6px;font-size:16px}
+.gridtbl td{padding:4px 10px 4px 0}
+.cellbad{border:2px solid var(--bad)!important}
+.cellok{border:2px solid var(--ok)!important}
+.ckrow{display:flex;gap:var(--s2);align-items:flex-start;max-width:66ch;margin-bottom:var(--s2);
+  font-size:18px;cursor:pointer}
+.ckrow input{margin-top:7px;flex:0 0 auto;width:auto}
+#dots{display:flex;gap:3px;margin-bottom:var(--s4)}
+#dots i{height:4px;flex:1;background:var(--hair)}
+#dots i.done{background:var(--navy)} #dots i.miss{background:var(--bad)}
+#dots i.now{background:var(--ink3)}
+@media(max-width:820px){
+  #app{flex-direction:column}
+  #side{width:100%;flex:0 0 auto;position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule)}
+  body{font-size:18px}
+}
+details{border-top:1px solid var(--hair);padding:var(--s2) 0}
+summary{cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary:before{content:"\203A\00a0";color:var(--ink3)}
+details[open] summary:before{content:"\2304\00a0"}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app">
+  <nav id="side">
+    <div class="brand">
+      <h1>Evercore Prep</h1>
+      <p id="brandsub">M&amp;A technicals</p>
+    </div>
+    <div class="lbl">Question bank</div>
+    <button class="nav" data-bank="400">The 400<span class="ct" id="ct400"></span></button>
+    <button class="nav" data-bank="full">Full bank<span class="ct" id="ctfull"></span></button>
+    <div class="lbl">Practice</div>
+    <button class="nav" data-view="session">Session<span class="ct" id="ctdue"></span></button>
+    <button class="nav" data-view="mode-binary">Binary</button>
+    <button class="nav" data-view="mode-card">Flashcards</button>
+    <button class="nav" data-view="mode-def">Definitions</button>
+    <button class="nav" data-view="mode-mc">Multiple choice</button>
+    <button class="nav" data-view="mode-calc">Calc</button>
+    <button class="nav" data-view="mode-grid">Three-statement</button>
+    <button class="nav" data-view="mode-frq">Free response</button>
+    <button class="nav" data-view="mode-spoken">Spoken check</button>
+    <div class="lbl">Review</div>
+    <button class="nav" data-view="diagnostic">Diagnostic</button>
+    <button class="nav" data-view="readiness">Readiness</button>
+    <button class="nav" data-view="ledger">Error ledger</button>
+    <button class="nav" data-view="settings">Settings</button>
+  </nav>
+  <main id="main"><div class="wrap" id="view"></div></main>
+</div>
+<script src="bank.js"></script>
+<script src="app.js"></script>

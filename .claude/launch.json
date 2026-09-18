@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "evercore-prep-site",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8732", "--directory", "/Users/badenbampbell/Documents/GitHub/evercore-prep"],
+      "port": 8732
+    }
+  ]
+}

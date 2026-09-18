@@ -1,0 +1,137 @@
+// ── LBO ───────────────────────────────────────────────────────────────────────
+const LBO = [
+{id:"lbo.why-works", area:"lbo", ch:"LBO Models – Concepts", in400:true, d:2, tags:["DEFINITIONAL","DIRECTION"],
+ q:"What is a leveraged buyout and why does it work?",
+ ans:"A financial sponsor acquires a company using a large proportion of debt and a small equity cheque, then uses the company's own cash flow to service and repay that debt, and exits in three to seven years. It works for three reasons. Leverage magnifies the equity return, because the sponsor captures all of the appreciation on the full enterprise value while having funded only a slice of it. Debt paydown converts enterprise value into equity value over the hold, since every dollar of debt repaid is a dollar more of equity at exit. And EBITDA growth or multiple expansion raises exit enterprise value. Leverage is also tax-efficient, since interest is deductible.",
+ rub:["Sponsor buys with mostly debt, small equity cheque","Target's own cash flow services the debt","Names all three return drivers: leverage, debt paydown, EBITDA growth / multiple expansion","Mentions the interest tax shield"],
+ def:{term:"Leveraged buyout"}},
+
+{id:"lbo.ideal-candidate", area:"lbo", ch:"LBO Models – Concepts", in400:true, d:2, tags:["DEFINITIONAL"],
+ q:"What makes an ideal LBO candidate?",
+ ans:"Stable and predictable cash flow, because the debt service is contractual and a miss means default. Low capital expenditure and low working capital intensity, so cash converts to debt paydown rather than being reinvested. A strong market position with a defensible moat. Low existing leverage, leaving debt capacity. Hard assets that can secure the debt. A reasonable entry multiple. Identifiable operational improvement or cost-cutting opportunity. And a credible exit — a strategic buyer universe or a plausible IPO path.",
+ rub:["Stable predictable cash flow first","Low CapEx and working capital intensity","Low existing leverage / debt capacity","Assets to secure borrowing","A credible exit route"]},
+
+{id:"lbo.paper-basic", area:"lbo", ch:"LBO Models – Calculations", in400:true, d:4, tags:["DIRECTION","LEVEL_NOT_DELTA"],
+ q:"A sponsor acquires a $100M EBITDA company at a 10x multiple funded with 60% debt. Over five years EBITDA is flat, the company repays $250M of debt, and the sponsor exits at 10x. What is the MOIC and the approximate IRR?",
+ ans:"Entry enterprise value is 10 × $100M = $1,000M. Debt is 60%, so $600M, and the sponsor's equity cheque is $400M. At exit, EBITDA is still $100M and the multiple is still 10x, so exit enterprise value is $1,000M. Debt has fallen from $600M to $350M. Exit equity value is $1,000M − $350M = $650M. MOIC is $650M / $400M = 1.63x. For the IRR, 1.63x over five years is roughly 10 percent — the quick anchors are that 2x in five years is about 15 percent and 3x in five years is about 25 percent, so 1.63x sits below 15 percent.",
+ rub:["Entry EV = multiple × EBITDA","Equity cheque = EV − debt, stated explicitly","Exit EV computed from exit EBITDA and exit multiple","Exit equity = exit EV − REMAINING debt (not original debt)","MOIC 1.63x","IRR ~10%, anchored against the 2x/3x rules of thumb"],
+ obj:"Every paper LBO is the same four lines: entry EV, equity cheque, exit EV, exit equity after remaining debt. The only thing that changes is which input they withhold.",
+ calc:{p:"$100M EBITDA at 10x, 60% debt, flat EBITDA, $250M of debt repaid over 5 years, exit at 10x. MOIC?",ans:1.625,tol:0.03,unit:"x",
+   work:"Entry EV 1,000. Debt 600, equity 400. Exit EV 1,000. Remaining debt 350. Exit equity 650. 650/400 = 1.63x."},
+ target:300},
+
+{id:"lbo.paper-growth", area:"lbo", ch:"LBO Models – Calculations", in400:true, d:5, tags:["DIRECTION"],
+ q:"A sponsor buys a $100M EBITDA business at 10x with 60% debt, repays $250M of debt over five years, and exits at 9x on $150M of EBITDA. MOIC and IRR?",
+ ans:"Entry enterprise value $1,000M, debt $600M, equity cheque $400M. Exit enterprise value is 9 × $150M = $1,350M. Remaining debt is $350M, so exit equity is $1,000M. MOIC is 2.5x. IRR is 2.5 to the power of one fifth minus one, about 20 percent. Note that the multiple contracted from 10x to 9x and the deal still returns 2.5x, because EBITDA grew 50 percent and $250M of debt was repaid — the two other return drivers more than offset multiple compression.",
+ rub:["Exit EV uses the EXIT multiple on EXIT EBITDA","Remaining debt, not original","MOIC 2.5x","IRR ≈ 20%","Attributes the return across the three drivers"],
+ calc:{p:"$100M EBITDA at 10x, 60% debt, $250M repaid over 5 years, exit at 9x on $150M EBITDA. IRR?",ans:20,tol:1.5,unit:"%",
+   work:"Equity 400 → exit equity 1,350 − 350 = 1,000. MOIC 2.5x. IRR = 2.5^(1/5) − 1 = 20.1%."},
+ target:300},
+
+{id:"lbo.irr-anchors", area:"lbo", ch:"LBO Models – Calculations", in400:false, d:3, tags:["DIRECTION"],
+ q:"What MOIC-to-IRR anchors should you have memorized?",
+ ans:"Over a five-year hold: 2x is about 15 percent, 2.5x is about 20 percent, 3x is about 25 percent, and 4x is about 32 percent. Over a three-year hold: 2x is about 26 percent and 3x is about 44 percent. These let you sanity-check an answer instantly and convert in either direction without a calculator, which is what the interviewer is actually testing.",
+ rub:["2x/5yr ≈ 15%","3x/5yr ≈ 25%","2x/3yr ≈ 26%","States the purpose: mental conversion under pressure"],
+ calc:{p:"A deal returns 3.0x over 5 years. Approximate IRR?",ans:25,tol:2,unit:"%",work:"3^(1/5) − 1 = 24.6%. The standard anchor is 'three-x in five years is about twenty-five percent.'"},
+ binary:{p:"2.0x MOIC over a 3-year hold is roughly…",a:"26% IRR",b:"15% IRR",c:0,why:"15% is 2x over FIVE years. Shorter hold, same multiple, much higher IRR. Mixing these up is a direction error, not an arithmetic one."}},
+
+{id:"lbo.debt-tranches", area:"lbo", ch:"LBO Models – Concepts", in400:true, d:4, tags:["DEFINITIONAL"],
+ q:"Describe the types of debt a sponsor might use in an LBO.",
+ ans:"From senior to junior. A revolver, undrawn at close, for working capital, priced off a floating base rate. Then a term loan A, amortizing, usually held by banks. Then a term loan B, the workhorse tranche, floating rate, minimal amortization at one percent a year with a bullet at maturity, held by institutional investors. Then senior secured or senior unsecured notes, fixed rate, non-amortizing, with call protection. Then subordinated or mezzanine debt, often with a PIK component and sometimes warrants. Moving down the stack, you give up security and seniority, so the interest rate rises, covenants loosen, and maturities lengthen.",
+ rub:["Orders them senior to junior","Revolver, TLA, TLB, senior notes, mezzanine/sub debt","Notes the floating vs fixed distinction","Notes amortizing vs bullet","States the rate/seniority trade-off as the organizing principle"]},
+
+{id:"lbo.returns-drivers", area:"lbo", ch:"LBO Models – Concepts", in400:true, d:3, tags:["DIRECTION","DEFINITIONAL"],
+ q:"What are the three drivers of returns in an LBO, and which matters most?",
+ ans:"Debt paydown, EBITDA growth, and multiple expansion. EBITDA growth is the most reliable and the one sponsors underwrite to, because it is within management's control and it compounds against the exit multiple. Debt paydown is mechanical and dependable but delivers a fixed dollar amount rather than a compounding one. Multiple expansion is the least controllable and the least defensible in an investment committee — underwriting to it is generally considered a red flag, and most sponsors model a flat or slightly contracted exit multiple.",
+ rub:["Names all three","Ranks them and justifies the ranking","Flags multiple expansion as the weakest underwriting assumption"],
+ binary:{p:"A sponsor underwrites a deal assuming the exit multiple is 2 turns higher than entry. This is…",a:"Standard practice",b:"A red flag",c:1,why:"Underwriting to multiple expansion means betting on the market rather than on the business. Sponsors typically model flat or contracted exit multiples."}},
+
+{id:"lbo.div-recap", area:"lbo", ch:"LBO Models – Concepts", in400:true, d:4, tags:["DEFINITIONAL","EV_VS_EQV"],
+ q:"What is a dividend recapitalization and why would a sponsor do one?",
+ ans:"The portfolio company raises new debt and uses the proceeds to pay a dividend to the sponsor, rather than to fund growth or an acquisition. The sponsor takes cash off the table early, de-risking its position and locking in part of the return without selling, which shortens the effective holding period of that capital and raises the IRR even though the MOIC is roughly unchanged. The cost is that the company is more levered, less resilient, and has less capacity for future borrowing, and the credit market has to be open for it to be possible at all.",
+ rub:["New debt raised to fund a dividend to the sponsor","Raises IRR by pulling cash forward","MOIC largely unaffected — distinguishes the two metrics","Names the cost: higher leverage, less flexibility"],
+ def:{term:"Dividend recapitalization"}},
+
+{id:"lbo.floor-valuation", area:"lbo", ch:"LBO Models – Concepts", in400:true, d:3, tags:["DIRECTION"],
+ q:"Why does an LBO analysis set a floor valuation?",
+ ans:"You run it backwards: fix the sponsor's required return, usually 20 to 25 percent IRR, and solve for the maximum price that still clears it. A financial sponsor has no synergies, so it can only pay for standalone cash flow and leverage. A strategic acquirer can pay more because it can realize cost and revenue synergies and often has a lower cost of capital. So the price a sponsor would pay is the lower bound on what the company should fetch in a competitive process — hence the floor.",
+ rub:["Solve for price given a target IRR, not the other way round","Sponsors have no synergies","Strategics can pay more","Therefore the sponsor price is a lower bound"]}
+];
+
+// ── M&A ───────────────────────────────────────────────────────────────────────
+const MA = [
+{id:"ma.merger-model", area:"ma", ch:"Merger Models – Concepts", in400:true, d:3, tags:["DEFINITIONAL","WRONG_STATEMENT"],
+ q:"Walk me through a merger model.",
+ ans:"First you set the purchase price and the consideration mix of cash, debt and stock. Second you project the standalone financials of both companies. Third you do purchase price allocation: write up the target's assets to fair value, create a deferred tax liability on any write-up that has no tax basis, and record the residual above fair value of identifiable net assets as goodwill. Fourth you combine the income statements: add the two, add synergies, then subtract the incremental interest on new debt, subtract the foregone interest on cash used, and add incremental depreciation and amortization from the asset write-ups as an expense. Fifth you tax the combined pre-tax income at the acquirer's tax rate. Sixth you divide by the new share count, which is the acquirer's existing shares plus any shares issued. Finally you compare the combined EPS against the acquirer's standalone EPS — higher is accretive, lower is dilutive.",
+ rub:["Purchase price and consideration mix","Purchase price allocation: write-ups, DTL, goodwill","Adds both income statements plus synergies","Subtracts new interest AND foregone interest on cash","Adds incremental D&A from write-ups","Taxes at the ACQUIRER's rate","Divides by the NEW share count","Compares to standalone EPS"],
+ obj:"The acquirer's tax rate and the new share count are the two steps candidates skip. Both change the answer.",
+ target:120},
+
+{id:"ma.accretion-shortcut", area:"ma", ch:"Merger Models – Concepts", in400:true, d:3, tags:["DIRECTION","EV_VS_EQV"],
+ q:"Is there a shortcut for telling whether a deal will be accretive or dilutive?",
+ ans:"For an all-stock deal, compare the two P/E multiples: if the acquirer's P/E is higher than the P/E it is paying for the target, the deal is accretive. For a cash or debt deal, compare yields. The target's earnings yield is the inverse of the purchase P/E. The cost of funding is the after-tax interest rate on new debt, or the after-tax foregone interest rate on cash used. If the target's earnings yield exceeds the after-tax cost of funding, the deal is accretive. This is why cash deals are almost always accretive in a low-rate environment — you are giving up one or two percent of after-tax interest to buy earnings yielding eight or ten percent.",
+ rub:["All-stock: compare P/E multiples","Cash/debt: compare the target's EARNINGS YIELD to the AFTER-TAX cost of funding","Earnings yield = 1 / purchase P/E","States the direction correctly: yield above cost = accretive","Explains the low-rate implication"],
+ obj:"Yield versus cost of funding. Always convert the P/E to a yield before comparing — comparing a multiple to an interest rate directly is the inversion that catches people.",
+ binary:{p:"An acquirer at a 20x P/E buys a target at a 25x P/E in an all-stock deal. The deal is…",a:"Accretive",b:"Dilutive",c:1,why:"The acquirer is paying a higher multiple than its own, so it issues relatively more shares than the earnings it buys. Dilutive. Acquirer P/E > target P/E is the accretive case."},
+ mc:{p:"An acquirer funds a deal with cash earning 2% pre-tax. The target is bought at a 10x P/E. The acquirer's tax rate is 25%. Accretive or dilutive?",
+   o:["Accretive — 10% earnings yield versus a 1.5% after-tax foregone yield",
+      "Dilutive — the 10x multiple is above the 2% rate",
+      "Accretive — 10% earnings yield versus the 2% pre-tax rate",
+      "Cannot tell without the acquirer's P/E"],c:0,
+   t:[null,"DIRECTION","DIRECTION","DEFINITIONAL"],
+   why:["Correct. 1/10 = 10% earnings yield against 2% × (1 − 0.25) = 1.5%. Strongly accretive.",
+        "You cannot compare a multiple to a rate. Invert the multiple to a yield first.",
+        "Right conclusion, wrong work — the foregone interest must be tax-affected because it would have been taxable income.",
+        "The acquirer's own P/E only matters for the stock-funded portion. This deal is all cash."]}},
+
+{id:"ma.accretion-calc-1", area:"ma", ch:"Merger Models – Calculations", in400:false, d:4, tags:["DIRECTION","EV_VS_EQV"],
+ q:"Company A has a market cap of $200M, pre-tax income of $100M and a 50% tax rate. It acquires Company B at a 4.5x P/E in an all-stock deal. Accretive or dilutive?",
+ ans:"Company A's net income is $100M × (1 − 0.50) = $50M, so its P/E is $200M / $50M = 4.0x. It is paying 4.5x for Company B. Since the acquirer's P/E of 4.0x is below the 4.5x it is paying, the deal is dilutive. The assumptions are that this is all stock, there are no synergies, and both companies have the same tax rate.",
+ rub:["Derives A's net income from EBT and tax rate","A's P/E = 4.0x","Compares 4.0x against 4.5x","DILUTIVE — correct direction","States the no-synergies and all-stock assumptions"],
+ calc:{p:"Market cap $200M, EBT $100M, tax rate 50%. What is the P/E?",ans:4,tol:0.05,unit:"x",
+   work:"NI = 100 × (1 − 0.50) = 50. P/E = 200 / 50 = 4.0x."},
+ obj:"This exact question appeared in four of five real Evercore first-round sets, with different numbers. Derive the acquirer's P/E from EBT and the tax rate before you compare anything."},
+
+{id:"ma.accretion-calc-2", area:"ma", ch:"Merger Models – Calculations", in400:false, d:4, tags:["DIRECTION"],
+ q:"Company A has a market cap of $2,000M, pre-tax income of $500M and a 50% tax rate. It acquires Company B at a 4.5x P/E in an all-stock deal. Accretive or dilutive?",
+ ans:"Net income is $500M × 0.50 = $250M, so A's P/E is $2,000M / $250M = 8.0x. It is paying 4.5x. The acquirer's P/E of 8.0x is above the 4.5x purchase multiple, so the deal is accretive.",
+ rub:["A's P/E = 8.0x","8.0x > 4.5x","ACCRETIVE"],
+ calc:{p:"Market cap $2,000M, EBT $500M, tax rate 50%. P/E?",ans:8,tol:0.05,unit:"x",work:"NI = 250. 2,000/250 = 8.0x."}},
+
+{id:"ma.purchase-accounting", area:"ma", ch:"Merger Models – Concepts", in400:true, d:4, tags:["BS_SIDE","DEFINITIONAL"],
+ q:"Why do deferred tax liabilities get created in many M&A deals?",
+ ans:"In a stock purchase the acquirer writes the target's assets up to fair value for book purposes, but the tax basis of those assets does not step up. The write-up creates incremental book depreciation and amortization that is not deductible for tax, so book tax expense will be lower than cash tax paid in future periods — the company will pay more cash tax than its books suggest. That future obligation is recorded at close as a deferred tax liability, generally the asset write-up times the tax rate, and it unwinds as the written-up assets depreciate. Because the DTL sits on the liabilities side, it increases the goodwill created in the deal.",
+ rub:["Book write-up with no corresponding tax-basis step-up","Incremental D&A is not tax deductible","DTL = write-up × tax rate","Sits on the LIABILITIES side","Unwinds over time and increases goodwill at close"],
+ binary:{p:"An asset write-up in a stock deal with no tax step-up creates a…",a:"Deferred tax liability",b:"Deferred tax asset",c:0,why:"The company will pay MORE cash tax than book tax in future because the extra D&A is not deductible. That is an obligation. Liability."}},
+
+{id:"ma.consideration", area:"ma", ch:"Merger Models – Concepts", in400:true, d:3, tags:["EV_VS_EQV","DIRECTION"],
+ q:"How does an acquirer decide the mix of cash, debt and stock, and why might it prefer stock?",
+ ans:"Cash is cheapest in accretion terms because the foregone after-tax interest on the balance sheet is usually a very low yield, so a company with excess cash uses it first. Debt is next cheapest, constrained by existing leverage, covenants, credit rating targets and market conditions. Stock is the most expensive and the most dilutive, so an acquirer uses it when it lacks cash and debt capacity, when the deal is very large relative to its own size, or when it believes its own stock is overvalued — issuing overvalued currency is cheap. A seller may prefer stock to participate in the upside of the combined company and to defer the tax on the gain, since an all-stock deal can be structured as tax-free to the seller.",
+ rub:["Ranks cash, debt, stock by accretion cost","Names the constraints on debt: leverage, covenants, ratings","Stock when the acquirer's currency is rich or the deal is large","Seller's perspective: upside participation and TAX DEFERRAL"],
+ binary:{p:"All else equal, which consideration is most dilutive to EPS?",a:"Stock",b:"Cash",c:0,why:"Stock issues new shares, adding to the denominator directly. Cash only gives up a small after-tax interest yield."}},
+
+{id:"ma.synergies", area:"ma", ch:"Merger Models – Concepts", in400:true, d:3, tags:["DEFINITIONAL","DIRECTION"],
+ q:"Would you rather have $1 of revenue synergy or $1 of cost synergy?",
+ ans:"Cost synergy, clearly. Cost synergies are largely within the acquirer's control — headcount reduction, facility consolidation, procurement leverage — and they are identifiable and quantifiable at diligence, so they are the ones the market and the ratings agencies actually credit. Revenue synergies depend on customer behaviour after the deal closes, take longer, and routinely fail to materialize. On top of that, $1 of cost synergy drops almost entirely to EBITDA, whereas $1 of revenue synergy only contributes its incremental margin. This is also why merger models systematically overstate synergies: they are usually modelled at full run-rate from day one, with no integration cost, no dis-synergy from customer or employee attrition, and no phase-in.",
+ rub:["Cost synergy, stated without hedging","Controllability and verifiability","$1 of cost → ~$1 of EBITDA; $1 of revenue → only the margin","Names why models overstate them: run-rate timing, integration cost, dis-synergies"],
+ binary:{p:"$1 of revenue synergy contributes as much to EBITDA as $1 of cost synergy.",a:"True",b:"False",c:1,why:"Revenue synergy contributes only its incremental margin. Cost synergy is nearly all EBITDA."}},
+
+{id:"ma.true-price", area:"ma", ch:"Merger Models – Concepts", in400:true, d:3, tags:["EV_VS_EQV"],
+ q:"What is the 'true price' in an M&A deal — purchase equity value or purchase enterprise value?",
+ ans:"Purchase enterprise value, because that is what the acquirer effectively pays for the operating business. The acquirer pays the equity holders the purchase equity value, but it also assumes the target's debt and gains the target's cash. Purchase enterprise value nets those out and is the figure that goes into transaction multiples, since it is comparable across targets with different capital structures. Purchase equity value is what matters for the selling shareholders' cheque, and for calculating how many acquirer shares must be issued in a stock deal.",
+ rub:["Enterprise value is the price of the BUSINESS","Acquirer assumes debt and receives cash","EV is what goes into transaction multiples","Equity value is what the selling shareholders receive and what drives share issuance"],
+ binary:{p:"Transaction multiples in a precedent transactions analysis use…",a:"Purchase enterprise value",b:"Purchase equity value",c:0,why:"You need capital-structure-neutral comparability across deals. EV/EBITDA, not equity value/EBITDA."}},
+
+{id:"ma.ev-after-deal", area:"ma", ch:"Merger Models – Calculations", in400:false, d:4, tags:["EV_VS_EQV"],
+ q:"A company is acquired for $800 of equity value and carries $250 of debt. Its LTM EBITDA is $100 and expected synergies are $5. What is the transaction EV/EBITDA, before and after synergies?",
+ ans:"Purchase enterprise value is $800 of equity value plus $250 of assumed debt, or $1,050, assuming no cash. Before synergies that is $1,050 / $100 = 10.5x. After synergies the denominator becomes $105, so $1,050 / $105 = 10.0x. The synergy-adjusted multiple is always lower, which is precisely why acquirers quote it.",
+ rub:["Adds assumed debt to equity value","10.5x unadjusted","Synergies adjust the DENOMINATOR, not the price","10.0x adjusted","Notes the rhetorical use of the adjusted figure"],
+ calc:{p:"$800 equity purchase price, $250 debt assumed, $100 LTM EBITDA, $5 synergies. Synergy-adjusted EV/EBITDA?",ans:10,tol:0.1,unit:"x",
+   work:"EV = 800 + 250 = 1,050. Adjusted EBITDA = 100 + 5 = 105. 1,050/105 = 10.0x."}},
+
+{id:"ma.most-accretive", area:"ma", ch:"Merger Models – Concepts", in400:false, d:3, tags:["DIRECTION"],
+ q:"How do you make an acquisition as accretive as possible?",
+ ans:"Fund it with the cheapest consideration available, which usually means cash first, then debt, then stock last. Pay the lowest possible purchase multiple, since the target's earnings yield is the inverse of what you pay. Maximize identifiable cost synergies and realize them early. Minimize the incremental depreciation and amortization from asset write-ups, since that is a real drag on combined EPS even though it is non-cash. And avoid issuing stock when your own currency is cheap. The caveat worth stating is that maximizing accretion is not the same as creating value — a deal can be accretive to EPS and still destroy shareholder value if the price paid exceeds the target's intrinsic worth.",
+ rub:["Cash, then debt, then stock","Lower purchase multiple = higher earnings yield","Cost synergies, realized early","Minimize write-up D&A","Names the caveat: accretion ≠ value creation"],
+ obj:"Accretion is an EPS arithmetic result. Value creation is a price-versus-worth judgment. Interviewers listen for whether you know the difference."}
+];

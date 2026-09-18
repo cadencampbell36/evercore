@@ -1,2 +1,7 @@
 .DS_Store
 node_modules/
+txt/
+data/
+*.pdf
+_drills.js
+_meta.js

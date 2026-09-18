@@ -10,7 +10,13 @@
   body{margin:0}
   img{max-width:100%}
   [hidden]{display:none!important}
-  details{border-top:1px solid var(--hair);padding:var(--s2) 0}
+  #gate{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:var(--s3)}
+.gatebox{max-width:46ch;width:100%;border:1px solid var(--rule);padding:var(--s5) var(--s4)}
+.gatebox h1{margin-bottom:var(--s2)}
+.gatebox form{margin-top:var(--s4)}
+.lbl2{display:block;font-size:15px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:var(--s1)}
+details{border-top:1px solid var(--hair);padding:var(--s2) 0}
   summary{cursor:pointer;list-style:none}
   summary::-webkit-details-marker{display:none}
   summary:before{content:"\203A\00a0";color:var(--ink3)}
@@ -123,7 +129,26 @@ th{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3
 
 </head>
 <body>
-<div id="app">
+<div id="gate" hidden>
+  <div class="gatebox">
+    <h1>Evercore Prep</h1>
+    <p class="mut2">The question bank is encrypted. Enter the passphrase to unlock it on this device.</p>
+    <form id="gform" autocomplete="on">
+      <label class="lbl2" for="gpass">Passphrase</label>
+      <input type="password" id="gpass" name="password" autocomplete="current-password" spellcheck="false">
+      <label class="ckrow" style="margin-top:var(--s3)">
+        <input type="checkbox" id="gremember" checked>
+        <span>Remember this device, so I only type this once</span>
+      </label>
+      <div class="row" style="margin-top:var(--s4)">
+        <button class="b" id="gbtn" type="submit">Unlock</button>
+        <span id="gmsg" class="mut"></span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="app" hidden>
   <nav id="side">
     <div class="brand">
       <h1>Evercore Prep</h1>
@@ -150,8 +175,7 @@ th{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3
   </nav>
   <main id="main"><div class="wrap" id="view"></div></main>
 </div>
-<script src="bank.js"></script>
-<script src="app.js"></script>
+<script src="gate.js"></script>
 
 </body>
 </html>

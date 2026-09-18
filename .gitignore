@@ -5,3 +5,5 @@ data/
 *.pdf
 _drills.js
 _meta.js
+bank.js
+reference.js

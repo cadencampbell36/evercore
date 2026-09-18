@@ -448,6 +448,9 @@ function loadReference() {
   if (REF_LOADED) return REF_LOADED;
   REF_LOADED = new Promise(res => {
     if (typeof REFERENCE !== "undefined") return res(true);
+    // Behind the gate the reference is ciphertext, so the gate hands us a loader that
+    // holds the key. Unencrypted hosts (the artifact) just fetch the plain file.
+    if (typeof window.__loadReference === "function") return res(window.__loadReference());
     const sc = document.createElement("script");
     sc.src = "reference.js";
     sc.onload = () => res(true);
@@ -1159,6 +1162,11 @@ function vSettings() {
       <span class="mut" id="impn"></span>
     </div>
     <div class="row" style="margin-top:var(--s3)"><button class="g" id="wipe">Erase all progress</button></div>
+    ${typeof window.__forgetDevice === "function" ? `<hr>
+      <h3>This device</h3>
+      <p class="mut">The unlock key is stored in this browser so you are not asked again. Forgetting it
+        does not touch your progress \u2014 you will just enter the passphrase next time.</p>
+      <div class="row"><button class="g" id="forget">Forget this device</button></div>` : ""}
     <hr>
     <h3>Storage</h3>
     <p class="mut">${!S.persisted ? "Not connected — nothing from this session will be saved."
@@ -1229,6 +1237,11 @@ function vSettings() {
     } catch (err) {
       note.innerHTML = `<span class="bad">Could not read that file: ${esc(err.message)}</span>`;
     }
+  };
+  const fg = document.getElementById("forget");
+  if (fg) fg.onclick = () => {
+    window.__forgetDevice();
+    fg.disabled = true; fg.textContent = "Forgotten \u2014 you will be asked next visit";
   };
   document.getElementById("wipe").onclick = async () => {
     const b = document.getElementById("wipe");

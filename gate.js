@@ -23,7 +23,10 @@ async function deriveKey(pass, salt) {
 }
 
 async function fetchBlob(name) {
-  const r = await fetch(name, {cache: "force-cache"});
+  // no-cache revalidates with the server and reuses the bytes when the ETag matches.
+  // force-cache would happily serve a bank encrypted under a passphrase you have since
+  // rotated, so the old passphrase would keep working on that device.
+  const r = await fetch(name, {cache: "no-cache"});
   if (!r.ok) throw new Error(`${name} is missing (${r.status})`);
   return new Uint8Array(await r.arrayBuffer());
 }

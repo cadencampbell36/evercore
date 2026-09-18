@@ -62,6 +62,29 @@ importing merges, and the newer record of each item wins, so an old file can't u
 There is no model grader on a static host, so written answers are scored against the rubric by
 you, with the guide's own teaching one click away.
 
+## Publishing
+
+The site is hosted on GitHub Pages from a **public** repo, so the question bank is encrypted
+rather than served in the clear. `bank.js` and `reference.js` are gitignored; only `bank.enc`
+and `reference.enc` ship.
+
+```bash
+tools/run.sh                 # rebuild bank.js and reference.js from source (only if changed)
+node tools/encrypt.js        # prompts for a passphrase, writes bank.enc and reference.enc
+git add -f bank.enc reference.enc && git commit -m "Update the encrypted bank" && git push
+```
+
+AES-256-GCM, key derived with PBKDF2-SHA256 at 600,000 iterations. There is no stored password
+to compare against: the wrong passphrase simply fails the GCM tag. Unlocking takes well under a
+second. "Remember this device" keeps the derived key in that browser, with a **Forget this
+device** control in Settings.
+
+**What this does and does not protect.** The ciphertext is indistinguishable from random
+(7.9998 bits per byte), so a visitor without the passphrase gets nothing readable. But the blob
+is downloadable by anyone with the URL, so the passphrase can be attacked offline. Use several
+unrelated words, not one word. Rotating it means re-running `encrypt.js` and committing again;
+every device is then asked for the new one.
+
 ## Source material
 
 Built from Breaking Into Wall Street's *400 Questions Guide* and the IB Interview Guide modules.

@@ -79,11 +79,19 @@ to compare against: the wrong passphrase simply fails the GCM tag. Unlocking tak
 second. "Remember this device" keeps the derived key in that browser, with a **Forget this
 device** control in Settings.
 
-**What this does and does not protect.** The ciphertext is indistinguishable from random
-(7.9998 bits per byte), so a visitor without the passphrase gets nothing readable. But the blob
-is downloadable by anyone with the URL, so the passphrase can be attacked offline. Use several
-unrelated words, not one word. Rotating it means re-running `encrypt.js` and committing again;
-every device is then asked for the new one.
+**What this does and does not protect.** Be clear-eyed about this one. The bank is genuinely
+encrypted, and the ciphertext is indistinguishable from random (7.9998 bits per byte), so nothing
+readable is served to a visitor who just opens the URL. But the passphrase in use is short by
+choice, and the encrypted blob is downloadable by anyone with the link, so it can be attacked
+offline and would not survive that for long.
+
+So: this is a gate that keeps casual visitors out. It is **not** protection for the guide text,
+and nothing here should be treated as though it were. That is a deliberate trade - convenience
+over strength - not an oversight. `tools/encrypt.js` refuses a passphrase under 12 characters
+unless you pass `--allow-weak`, which is what produced the current build.
+
+If you ever want it to actually hold, re-run `node tools/encrypt.js` with several unrelated words
+and commit again. Every device is then asked for the new passphrase, and the old one stops working.
 
 ## Source material
 

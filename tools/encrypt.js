@@ -43,12 +43,19 @@ function ask(prompt) {
 }
 
 (async () => {
+  const allowWeak = process.argv.includes("--allow-weak");
   const pass = await ask("Passphrase: ");
-  if (pass.length < 12) {
+  if (pass.length < 12 && !allowWeak) {
     console.error("\nToo short. This passphrase is the only thing between a public URL and the");
     console.error("guide text, and it can be brute forced offline against the downloaded file.");
     console.error("Use at least 12 characters - several unrelated words is ideal.");
+    console.error("\nIf a courtesy gate is genuinely what you want, pass --allow-weak.");
     process.exit(1);
+  }
+  if (pass.length < 12) {
+    console.warn("\n!! Short passphrase. The ciphertext is real AES, but a short key falls to an");
+    console.warn("!! offline attack on the downloaded blob almost immediately. Treat this as a");
+    console.warn("!! gate that keeps casual visitors out, not as protection for the content.");
   }
   const again = await ask("Again: ");
   if (pass !== again) { console.error("\nThey do not match."); process.exit(1); }

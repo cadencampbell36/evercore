@@ -9,3 +9,4 @@ bank.js
 reference.js
 
 # built locally by tools/encrypt.js with YOUR passphrase - never commit a test build
+.claude/

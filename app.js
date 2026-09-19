@@ -18,7 +18,7 @@ const S = {
   db: null, sample: null, downloads: null, persisted: false,
   sched: {},                 // conceptId -> scheduling + mastery state
   recent: [],                // compact attempts, capped, for the readiness score
-  meta: {interviewDate: "2026-11-30", bank: "400", theme: null, diagnostic: null, totals: {}},
+  meta: {interviewDate: "2026-11-30", bank: "400", theme: "light", diagnostic: null, totals: {}},
   session: null,
   dirty: new Set(), saveTimer: null, view: "session",
 };
@@ -233,6 +233,12 @@ function record(conceptId, mode, correctness, ms, tags, precision) {
     if (event) S.session.events.push({id: conceptId, event, at: now});
     if (!ok) S.session.requeue.push(conceptId);          // missed items return this session
   }
+  if (S.session && S.session.adaptive) {            // escalate on a hit, drop back on a miss
+    const ar = byId[conceptId] ? byId[conceptId].area : null;
+    if (ar && S.session.level[ar] != null) {
+      S.session.level[ar] = Math.max(1, Math.min(5, S.session.level[ar] + (ok ? 0.8 : -1.0)));
+    }
+  }
   markDirty("sched:" + shardOf(conceptId)); markDirty("stats"); markDirty("session");
   return {event, isRetention, slow, target};
 }
@@ -350,7 +356,11 @@ function buildQueue(n, modeFilter) {
 
 function startSession(opts) {
   const o = opts || {};
-  const openers = retentionCandidates().slice(0, 5)
+  // In a single-mode session the openers must honour that mode too, or "Binary" opens with
+  // five free-response items. Only concepts that actually carry the mode are eligible.
+  const openers = retentionCandidates()
+    .filter(x => !o.mode || x.c.modes.includes(o.mode))
+    .slice(0, 5)
     .map(x => ({c: x.c, mode: pickMode(x.c, o.mode), retention: true}));
   const rest = buildQueue((o.n || 24) - openers.length, o.mode)
     .filter(it => !openers.some(x => x.c.id === it.c.id));
@@ -371,10 +381,17 @@ function sessionDoc() {
 function current() {
   const s = S.session;
   if (!s) return null;
+  if (s.adaptive && s.i >= s.queue.length && s.queue.length < s.target) {
+    const nx = nextDiagnosticItem();
+    if (nx) s.queue.push(nx);
+  }
   if (s.i < s.queue.length) return s.queue[s.i];
-  if (s.requeue.length) {                       // missed items return within the session
+  while (s.requeue.length) {                    // missed items return within the session
     const id = s.requeue.shift(), c = byId[id];
-    if (c) { s.queue.push({c, mode: pickMode(c), again: true}); return s.queue[s.i]; }
+    if (!c) continue;
+    if (s.mode && !c.modes.includes(s.mode)) continue;   // keep a single-mode session single-mode
+    s.queue.push({c, mode: pickMode(c, s.mode), again: true});
+    return s.queue[s.i];
   }
   return null;
 }
@@ -493,10 +510,19 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, m => ({"&":"&amp;
 const money = n => (n < 0 ? "−" : "") + "$" + Math.abs(Math.round(n * 100) / 100);
 function h(html) { const d = document.createElement("div"); d.innerHTML = html; return d; }
 function applyTheme() {
-  if (S.meta.theme) document.documentElement.setAttribute("data-theme", S.meta.theme);
-  else document.documentElement.removeAttribute("data-theme");
+  // Cream is the default, not the OS preference. Positive polarity reads measurably faster
+  // over long sessions, and Times New Roman's hairline serifs bloom badly on a dark ground.
+  const t = S.meta.theme || "light";
+  if (t === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
 }
 let timerStart = 0;
+let keyHandler = null;      // set by the live renderer; cleared when the item changes
+document.addEventListener("keydown", e => {
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
+  if (keyHandler) keyHandler(e);
+});
 const startTimer = () => (timerStart = performance.now());
 const elapsed = () => performance.now() - timerStart;
 
@@ -530,6 +556,7 @@ function renderItem(item) {
     <div class="mut">${item.retention ? "Retention check" : item.again ? "Again" : c.in400 ? "The 400" : "Full bank"}</div></div><hr>`;
   const f = {binary: rBinary, card: rCard, def: rText, frq: rText, mc: rMC, calc: rCalc,
              grid: rGrid, spoken: rSpoken}[mode] || rCard;
+  keyHandler = null;
   V().innerHTML = sessionChrome() + head + `<div id="item"></div>`;
   f(c, mode);
   startTimer();
@@ -586,42 +613,95 @@ function finish(c, mode, correctness, tags, precision, extra) {
 
 function rBinary(c) {
   const b = c.binary;
+  const target = TARGET.binary;
   document.getElementById("item").innerHTML = `
     <p class="stem">${esc(b.p)}</p>
-    <div class="row" style="margin-top:var(--s4)">
-      <button class="bigbtn" data-i="0">${esc(b.a)}</button>
-      <button class="bigbtn" data-i="1">${esc(b.b)}</button>
-    </div><div id="fb"></div>`;
-  V().querySelectorAll(".bigbtn").forEach(btn => btn.onclick = () => {
-    const pick = +btn.dataset.i, ok = pick === b.c;
-    V().querySelectorAll(".bigbtn").forEach(x => x.disabled = true);
-    btn.style.borderColor = ok ? "var(--ok)" : "var(--bad)"; btn.style.borderWidth = "2px";
-    document.getElementById("fb").innerHTML =
-      `<p class="${ok ? "ok" : "bad"}" style="margin-top:var(--s3)"><b>${ok ? "Correct." : "Wrong."}</b> ${esc(b.why || "")}</p>`;
+    <div class="binwrap">
+      <button class="bigbtn" data-i="0">${esc(b.a)}<span class="kbd">1</span></button>
+      <button class="bigbtn" data-i="1">${esc(b.b)}<span class="kbd">2</span></button>
+    </div>
+    <div class="binmeta">
+      <span>Press 1 or 2. Target ${target}s.</span>
+      <span class="lat" id="lat"></span>
+    </div>
+    <div id="fb"></div>`;
+
+  const btns = [...V().querySelectorAll(".bigbtn")];
+  const tick = setInterval(() => {
+    const el = document.getElementById("lat");
+    if (el) el.textContent = (elapsed() / 1000).toFixed(1) + "s";
+  }, 100);
+
+  const answer = pick => {
+    if (btns[0].disabled) return;
+    clearInterval(tick);
+    const ms = elapsed(), ok = pick === b.c;
+    btns.forEach((x, i) => {
+      x.disabled = true;
+      if (i === b.c) x.classList.add("right");
+      else if (i === pick) x.classList.add("wrong");
+      else x.classList.add("dim");
+    });
+    const lat = document.getElementById("lat");
+    lat.textContent = (ms / 1000).toFixed(1) + "s";
+    lat.className = "lat " + (ms < target * 1000 ? "fast" : ms > target * 2000 ? "slow" : "");
+    document.getElementById("fb").innerHTML = `
+      <div class="verdict ${ok ? "ok" : "bad"}">
+        <span class="vmark">${ok ? "✓" : "✗"}</span>
+        <div><b>${ok ? "Correct." : "Wrong."}</b> ${esc(b.why || "")}</div>
+      </div>`;
+    timerStart = performance.now() - ms;
     finish(c, "binary", ok ? 2 : 0, ok ? [] : (c.tags || []).slice(0, 1), null);
-  });
+  };
+
+  btns.forEach(btn => btn.onclick = () => answer(+btn.dataset.i));
+  keyHandler = e => {
+    if (e.key === "1" || e.key === "ArrowLeft") { e.preventDefault(); answer(0); }
+    else if (e.key === "2" || e.key === "ArrowRight") { e.preventDefault(); answer(1); }
+    else if (e.key === "Enter" || e.key === " ") {
+      const n = document.getElementById("next");
+      if (n) { e.preventDefault(); n.click(); }
+    }
+  };
 }
 
 function rMC(c) {
-  const m = c.mc;
+  const m = c.mc, LETTERS = ["A", "B", "C", "D", "E", "F"];
   document.getElementById("item").innerHTML = `
     <p class="stem">${esc(m.p || c.q)}</p>
-    <div id="opts" style="margin-top:var(--s4)">${m.o.map((o, i) =>
-      `<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}</div><div id="fb"></div>`;
-  V().querySelectorAll(".opt").forEach(btn => btn.onclick = () => {
-    const pick = +btn.dataset.i, ok = pick === m.c;
-    V().querySelectorAll(".opt").forEach((x, i) => {
+    <div id="opts">${m.o.map((o, i) =>
+      `<button class="opt" data-i="${i}"><span class="mk">${LETTERS[i]}</span>${esc(o)}</button>`).join("")}</div>
+    <p class="mut">Press ${m.o.map((_, i) => LETTERS[i]).join(", ")} or click.</p>
+    <div id="fb"></div>`;
+
+  const opts = [...V().querySelectorAll(".opt")];
+  const answer = pick => {
+    if (opts[0].disabled) return;
+    const ok = pick === m.c;
+    opts.forEach((x, i) => {
       x.disabled = true;
       if (i === m.c) x.classList.add("right");
       else if (i === pick) x.classList.add("wrong");
     });
-    // The explanation covers why the CHOSEN distractor is wrong, not only why the answer is right.
     const why = m.why || [];
-    document.getElementById("fb").innerHTML = `<hr>
-      ${!ok ? `<p class="bad"><b>Your answer.</b> ${esc(why[pick] || "")}</p>` : ""}
-      <p class="ok"><b>Correct answer.</b> ${esc(why[m.c] || "")}</p>`;
+    // The explanation covers the option actually chosen, not only the correct one.
+    document.getElementById("fb").innerHTML = `
+      <div class="verdict ${ok ? "ok" : "bad"}">
+        <span class="vmark">${ok ? "✓" : "✗"}</span>
+        <div>${ok ? "" : `<p><b>${LETTERS[pick]} — your answer.</b> ${esc(why[pick] || "")}</p>`}
+          <p><b>${LETTERS[m.c]} — correct.</b> ${esc(why[m.c] || "")}</p></div>
+      </div>`;
     finish(c, "mc", ok ? 2 : 0, ok ? [] : [m.t && m.t[pick]].filter(Boolean), null);
-  });
+  };
+  opts.forEach(btn => btn.onclick = () => answer(+btn.dataset.i));
+  keyHandler = e => {
+    const i = LETTERS.indexOf(e.key.toUpperCase());
+    if (i >= 0 && i < m.o.length) { e.preventDefault(); answer(i); }
+    else if (e.key === "Enter") {
+      const n = document.getElementById("next");
+      if (n) { e.preventDefault(); n.click(); }
+    }
+  };
 }
 
 function rCalc(c) {
@@ -706,28 +786,28 @@ function rText(c, mode) {
     ta.disabled = sub.disabled = true; document.getElementById("cant").disabled = true;
     const fb = document.getElementById("fb");
     fb.innerHTML = `<hr><p class="mut">Grading…</p>`;
-    const r = S.sample ? await gradeText(c, mode, text) : null;
+    // Claude grades it where a model is available; otherwise the local fuzzy grader does,
+    // which is the case on the static host. Both return the same shape.
+    const modelResult = S.sample ? await gradeText(c, mode, text) : null;
+    const r = (!modelResult || modelResult.failed) ? gradeLocal(c, mode, text) : modelResult;
     timerStart = performance.now() - ms;
-    if (!r || r.failed) {
-      // No grader available: fall back to rubric self-scoring rather than inventing a grade.
-      fb.innerHTML = `<hr><p class="warn">${S.sample ? "The grader could not be reached" : "Model grading is not available in this view"} — score it against the rubric yourself.</p>
-        <div class="ansbox">${esc(c.a).slice(0, 1200)}</div><hr>
-        ${(c.rub || []).map((x, i) => `<label class="ckrow"><input type="checkbox" data-i="${i}"> <span>${esc(x)}</span></label>`).join("")}
-        <button class="b" id="gr2" style="margin-top:var(--s3)">Score it</button><div id="fb2"></div>`;
-      document.getElementById("gr2").onclick = () => {
-        const boxes = [...fb.querySelectorAll("input[type=checkbox]")];
-        const frac = boxes.filter(b => b.checked).length / (boxes.length || 1);
-        document.getElementById("gr2").disabled = true;
-        finish(c, mode, frac >= 0.8 ? 2 : frac >= 0.4 ? 1 : 0, [], null);
-      };
-      return;
-    }
+
+    const verdict = r.correctness === 2 ? "Complete" : r.correctness === 1 ? "Partial" : "Not there";
+    const cls = r.correctness === 2 ? "ok" : r.correctness === 1 ? "warn" : "bad";
     fb.innerHTML = `<hr>
-      <p class="${r.correctness === 2 ? "ok" : r.correctness === 1 ? "warn" : "bad"}">
-        <b>${r.correctness === 2 ? "Complete." : r.correctness === 1 ? "Partial." : "Not there."}</b>
-        Precision ${Math.round(r.precision * 100)}%.</p>
+      <div class="verdict ${cls}">
+        <span class="vmark">${r.correctness === 2 ? "\u2713" : r.correctness === 1 ? "\u2013" : "\u2717"}</span>
+        <div>
+          <b>${verdict}.</b> Precision ${Math.round(r.precision * 100)}%.
+          <div class="mut">${r.local ? "Graded on this device against the rubric" : "Graded by Claude"}</div>
+        </div>
+      </div>
       <p class="ansbox">${esc(r.feedback)}</p>
-      ${r.missed.length ? `<p class="mut2"><b>Missing:</b> ${r.missed.map(esc).join("; ")}</p>` : ""}`;
+      ${(r.notes || []).length > 1 ? `<ul class="notes">${r.notes.slice(1).map(n => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
+      ${(r.hit || []).length ? `<p class="lblsm ok">Covered</p><ul class="rubl ok">${
+        r.hit.map(x => `<li>${esc(x.length > 120 ? x.slice(0, 120) + "\u2026" : x)}</li>`).join("")}</ul>` : ""}
+      ${(r.missed || []).length ? `<p class="lblsm bad">Missing</p><ul class="rubl bad">${
+        r.missed.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
     finish(c, mode, r.correctness, r.errors, r.precision);
   };
 }
@@ -785,9 +865,13 @@ function rGrid(c) {
     <table class="gridtbl"><thead><tr><th>Line</th><th>Change</th><th>Side</th><th></th></tr></thead><tbody id="tBS">${rows("BS", BS_LINES)}</tbody></table>
     <hr class="hv">
     <h3>Does it balance?</h3>
-    <p class="mut">Compute it yourself. The tool will not add your figures up for you.</p>
-    <div class="row" style="max-width:520px">
-      <input type="number" step="any" id="bal" placeholder="Assets − (Liabilities + Equity)">
+    <p class="mut">Add up your own two sides and enter the <em>change</em> in each. The tool will not
+       total your figures for you, and it will not say whether they agree until you submit.</p>
+    <div class="balrow">
+      <label class="fieldlab">Change in total assets
+        <input type="number" step="any" id="balA" placeholder="0"></label>
+      <label class="fieldlab">Change in liabilities + equity
+        <input type="number" step="any" id="balL" placeholder="0"></label>
       <button class="g" id="runbal">Run the balance check</button>
     </div>
     <div id="balfb"></div>
@@ -796,14 +880,19 @@ function rGrid(c) {
       <span class="mut" id="subnote">Run the balance check first.</span>
     </div><div id="fb"></div>`;
 
-  let balanceRun = false, balanceValue = null;
+  let balanceRun = false, balA = null, balL = null;
   document.getElementById("runbal").onclick = () => {
-    const raw = document.getElementById("bal").value;
-    if (raw === "") { document.getElementById("balfb").innerHTML = `<p class="warn">Enter your figure first.</p>`; return; }
-    balanceRun = true; balanceValue = parseFloat(raw);
-    document.getElementById("balfb").innerHTML = balanceValue === 0
-      ? `<p class="ok">You say it balances. Submitted answers are still checked cell by cell.</p>`
-      : `<p class="warn">You say it is out by ${money(balanceValue)}. You can still submit — but a real walkthrough would go back and find it.</p>`;
+    const a = document.getElementById("balA").value, l = document.getElementById("balL").value;
+    if (a === "" || l === "") {
+      document.getElementById("balfb").innerHTML = `<p class="warn">Enter both sides first.</p>`;
+      return;
+    }
+    balanceRun = true; balA = parseFloat(a); balL = parseFloat(l);
+    document.getElementById("balfb").innerHTML = Math.abs(balA - balL) < 0.005
+      ? `<p class="ok">Your two sides agree at ${money(balA)}. Whether that is the <em>right</em>
+         figure is checked when you submit.</p>`
+      : `<p class="warn">Your sides disagree by ${money(balA - balL)}. You can still submit, but a
+         real walkthrough would stop here and find it.</p>`;
     document.getElementById("sub").disabled = false;
     document.getElementById("subnote").textContent = "";
   };
@@ -916,12 +1005,8 @@ function rSpoken(c) {
     document.getElementById("sub").disabled = true;
     document.getElementById("fb").innerHTML = `<hr><p class="mut">Grading…</p>`;
     timerStart = performance.now() - secs * 1000;     // score against spoken time, not typing time
-    const r = S.sample ? await gradeText(c, "spoken", text) : null;
-    if (!r || r.failed) {
-      document.getElementById("fb").innerHTML = `<hr><p class="warn">Grader unavailable. Timing recorded: ${secs}s against a ${target}s target.</p>`;
-      finish(c, "spoken", 1, [], null);
-      return;
-    }
+    const modelResult = S.sample ? await gradeText(c, "spoken", text) : null;
+    const r = (!modelResult || modelResult.failed) ? gradeLocal(c, "spoken", text) : modelResult;
     const overtime = secs > target * 1.5;
     document.getElementById("fb").innerHTML = `<hr>
       <p class="${r.correctness === 2 ? "ok" : r.correctness === 1 ? "warn" : "bad"}"><b>Content:
@@ -941,7 +1026,7 @@ function vSession() {
   const due = buildQueue(999).length, ret = retentionCandidates().length;
   const r = readiness();
   V().innerHTML = `
-    <h1>Session</h1>
+    <div class="pagehead"><div class="eyebrow">Practice</div><h1>Session</h1></div>
     <p class="mut2" style="max-width:62ch">Every session opens with five retention items from earlier
       sessions before any new material. That is not a setting.</p>
     ${!S.persisted ? `<div class="banner">Progress storage is not available in this view, so nothing
@@ -965,6 +1050,19 @@ function vSession() {
 function vSessionEnd() {
   const s = S.session;
   s.endedAt = Date.now();
+  if (s.diag && !s.recorded) {
+    s.recorded = true;
+    const byArea = {};
+    for (const at of s.attempts) {
+      const c = byId[at[1]]; if (!c) continue;
+      const o = byArea[c.area] || (byArea[c.area] = {n: 0, right: 0,
+        level: s.level ? s.level[c.area] : 2.5});
+      o.n++; if (at[3] === 2) o.right++;
+    }
+    S.meta.diagnostic = {at: Date.now(), byArea, total: s.attempts.length,
+      correct: s.attempts.filter(x => x[3] === 2).length};
+    markDirty("meta");
+  }
   const r = readiness(); s.readinessAfter = r ? r.score : null;
   const ok = s.attempts.filter(a => a[3] === 2).length;
   const delta = (s.readinessBefore != null && s.readinessAfter != null) ? s.readinessAfter - s.readinessBefore : null;
@@ -1030,9 +1128,16 @@ function vReadiness() {
   const decayed = CONCEPTS.filter(c => S.sched[c.id] && S.sched[c.id].st === 3);
   const gaps = CONCEPTS.filter(c => S.sched[c.id] && isConceptGap(S.sched[c.id]));
   V().innerHTML = `
-    <h1>Evercore readiness</h1>
-    ${r ? `<div class="score">${r.score}</div>
-      <p class="mut">out of 100${r.measured < 100 ? ` · ${r.measured} of 100 points measured so far — unmeasured components score zero rather than being redistributed` : ""}</p>
+    <div class="pagehead"><div class="eyebrow">Progress</div><h1>Evercore readiness</h1></div>
+    ${r ? `<div class="score">${r.score}</div><div class="scorerule"></div>
+      <p class="mut">out of 100${r.measured < 100 ? ` · only ${r.measured} of 100 points are measured so far. Unmeasured components score zero rather than being redistributed, so the headline cannot be inflated by avoiding the modes that measure them.` : ""}</p>
+      <div class="statrow">
+        ${[["Accuracy", r.accuracy, 40], ["Retention", r.retention, 25],
+           ["Speed", r.speed, 20], ["Precision", r.precision, 15]]
+          .map(([n, v, w]) => `<div class="stat"><div class="k">${n}</div>
+            <div class="v">${v == null ? "—" : Math.round(v * 100) + "%"}</div>
+            <div class="w">${w}% of the score</div></div>`).join("")}
+      </div>
       <hr>
       <table style="max-width:560px">
         ${[["Accuracy", r.accuracy, 40, "recent attempts weighted more heavily"],
@@ -1083,7 +1188,7 @@ function vLedger() {
   const rows = Object.keys(ERROR_TAGS).map(k => ({k, ...counts[k]}))
     .sort((a, b) => b.missed - a.missed || b.seen - a.seen);
   V().innerHTML = `
-    <h1>Error ledger</h1>
+    <div class="pagehead"><div class="eyebrow">Progress</div><h1>Error ledger</h1></div>
     <p class="mut2" style="max-width:62ch">Your ten recorded error patterns, and what the attempt
       history actually says about each. This is keyed to the error, not to the question — the same
       mistake counts wherever it shows up.</p>
@@ -1107,33 +1212,57 @@ function vDiagnostic() {
   if (S.session && S.session.diag) return vSession();
   const done = S.meta.diagnostic;
   V().innerHTML = `
-    <h1>Placement diagnostic</h1>
-    <p class="mut2" style="max-width:62ch">Twenty-five questions across all six areas, stratified by
-      difficulty, mixed modes. It seeds the schedule. It is deliberately not adaptive: over 25 items
-      for one person, adaptivity buys almost nothing a stratified set does not, and it would report a
-      confidence the data cannot support.</p>
-    ${done ? `<hr><p>Last taken ${esc(new Date(done.at).toISOString().slice(0, 10))} ·
-      scored ${done.correct} of ${done.total}.</p>` : ""}
-    <div class="row" style="margin-top:var(--s4)"><button class="b" id="go">${done ? "Retake" : "Start"} the diagnostic</button></div>`;
+    <div class="pagehead"><div class="eyebrow">Placement</div><h1>Diagnostic</h1></div>
+    <p class="lead">Twenty-five questions across all areas. It escalates when you are right and drops
+      back when you are wrong, so it spends its questions where your level actually is rather than
+      asking twenty you find trivial. Quick modes only &mdash; about fifteen minutes.</p>
+    <p class="lead">The output is a per-area starting estimate that seeds the schedule. Treat it as
+      provisional: a handful of questions per area can point in a direction and no more.</p>
+    ${done ? `<hr><table style="max-width:560px">
+      <thead><tr><th>Area</th><th class="num">Score</th><th class="num">Level reached</th></tr></thead>
+      ${Object.keys(done.byArea || {}).map(k => `<tr><td>${esc(AREAS[k] || k)}</td>
+        <td class="num">${done.byArea[k].right}/${done.byArea[k].n}</td>
+        <td class="num">${done.byArea[k].level.toFixed(1)} of 5</td></tr>`).join("")}
+      </table><p class="mut">Taken ${esc(new Date(done.at).toISOString().slice(0, 10))}.</p>` : ""}
+    <div class="row" style="margin-top:var(--s4)">
+      <button class="b" id="go">${done ? "Retake" : "Start"} the diagnostic</button>
+    </div>`;
   document.getElementById("go").onclick = () => {
-    const per = {}, items = [];
-    for (const k of AREAS_K) per[k] = [];
-    for (const c of pool()) per[c.area].push(c);
-    for (const k of AREAS_K) {
-      const sorted = per[k].slice().sort((a, b) => a.d - b.d);
-      const picks = [1, 2, 3, 4].map(i => sorted[Math.floor((i / 5) * sorted.length)]).filter(Boolean);
-      picks.slice(0, 4).forEach(c => items.push({c, mode: pickMode(c)}));
-    }
-    S.session = {id: uid(), startedAt: Date.now(), diag: true, bank: S.meta.bank, mode: null,
-                 queue: interleave(items).slice(0, 25), i: 0, attempts: [], events: [], requeue: [],
-                 openerCount: 0, readinessBefore: (readiness() || {}).score ?? null};
+    S.session = {
+      id: uid(), startedAt: Date.now(), diag: true, adaptive: true, bank: S.meta.bank, mode: null,
+      queue: [], i: 0, attempts: [], events: [], requeue: [], openerCount: 0, target: 25,
+      level: {}, seen: [],
+      readinessBefore: (readiness() || {}).score ?? null,
+    };
+    AREAS_K.forEach(k => S.session.level[k] = 2.5);   // start mid-difficulty everywhere
     render();
   };
 }
 
+/* The next diagnostic item: whichever area has been asked least, at that area's current
+   level, in the quickest mode the concept supports. */
+function nextDiagnosticItem() {
+  const s = S.session;
+  const asked = {};
+  AREAS_K.forEach(k => asked[k] = 0);
+  s.queue.forEach(q => asked[q.c.area]++);
+  const area = AREAS_K.slice().sort((x, y) => asked[x] - asked[y])[0];
+  const want = s.level[area];
+  const FAST = ["binary", "mc", "calc", "def"];
+  const pool = CONCEPTS.filter(c => c.area === area && s.seen.indexOf(c.id) < 0
+    && (S.meta.bank !== "400" || c.in400)
+    && c.modes.some(m => FAST.indexOf(m) >= 0));
+  if (!pool.length) return null;
+  pool.sort((x, y) => Math.abs((x.d || 3) - want) - Math.abs((y.d || 3) - want));
+  const c = pool[Math.floor(Math.random() * Math.min(4, pool.length))];
+  s.seen.push(c.id);
+  const mode = FAST.filter(m => c.modes.indexOf(m) >= 0)[0];
+  return {c, mode, diagnostic: true};
+}
+
 function vSettings() {
   V().innerHTML = `
-    <h1>Settings</h1>
+    <div class="pagehead"><h1>Settings</h1></div>
     <hr>
     <h3>Interview date</h3>
     <p class="mut">Every repetition interval is capped at a quarter of the time remaining, so the whole
@@ -1143,13 +1272,13 @@ function vSettings() {
     <hr>
     <h3>Theme</h3>
     <div class="row">
-      <button class="g" data-t="">System</button>
-      <button class="g" data-t="light">Light</button>
-      <button class="g" data-t="dark">Dark</button>
+      <button class="g${(S.meta.theme || "light") === "light" ? " on" : ""}" data-t="light">Cream</button>
+      <button class="g${S.meta.theme === "dark" ? " on" : ""}" data-t="dark">Dark</button>
+      <button class="g${S.meta.theme === "system" ? " on" : ""}" data-t="system">Match system</button>
     </div>
-    <p class="mut" style="max-width:62ch">Light is the default on purpose: positive polarity reads
-      measurably faster over long sessions, and Times New Roman's hairline serifs bloom worst of all
-      typefaces on a dark ground.</p>
+    <p class="mut" style="max-width:62ch">Cream is the default on purpose: positive polarity reads
+      measurably faster over long sessions, and Times New Roman's hairline serifs bloom worse than
+      most faces on a dark ground. Dark is there if you want it late at night.</p>
     <hr>
     <h3>Move your progress</h3>
     <p class="mut">Progress lives in this browser, so it does not follow you to another machine.
@@ -1182,7 +1311,7 @@ function vSettings() {
     S.meta.interviewDate = e.target.value; markDirty("meta"); render();
   };
   V().querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
-    S.meta.theme = b.dataset.t || null; applyTheme(); markDirty("meta");
+    S.meta.theme = b.dataset.t; applyTheme(); markDirty("meta");
     try { localStorage.setItem("evp-theme", S.meta.theme || "system"); } catch (e) {}
     render();
   });
@@ -1258,6 +1387,39 @@ function vSettings() {
   };
 }
 
+
+/* Reading the guide is what this tool exists to replace, so this view is deliberately
+   separate from drilling: it records nothing and touches no schedule. It is here because
+   sometimes you just want to look something up. */
+let readSection = null;
+function vRead() {
+  const items = CONCEPTS.filter(c => c.in400 && c.section);
+  const sections = [...new Set(items.map(c => c.section))];
+  if (!readSection || !sections.includes(readSection)) readSection = sections[0];
+  const shown = items.filter(c => c.section === readSection);
+  V().innerHTML = `
+    <div class="pagehead">
+      <div class="eyebrow">Reference</div>
+      <h1>The 400</h1>
+    </div>
+    <p class="lead">${items.length} questions with the guide's own answers, by chapter. Nothing here
+      is recorded and nothing is scheduled &mdash; reading is not practice. Use it to look something
+      up after you have already tried to produce the answer.</p>
+    <div class="readnav">${sections.map(s =>
+      `<button data-s="${esc(s)}" class="${s === readSection ? "on" : ""}">${esc(s)}
+        <span class="mut">${items.filter(c => c.section === s).length}</span></button>`).join("")}</div>
+    <div class="secthead"><b>${esc(readSection)}</b> <span class="mut">${shown.length} questions</span></div>
+    ${shown.map((c, i) => `<div class="qa">
+      <div class="qn">${String(i + 1).padStart(2, "0")} &middot; ${esc(AREAS[c.area] || c.area)}</div>
+      <h3>${esc(c.q)}</h3>
+      <div class="body">${esc(c.a).replace(/•/g, "\n•")}</div>
+      ${(c.v || []).length ? `<p class="mut">Also asked as: ${esc(c.v[0].q)}</p>` : ""}
+    </div>`).join("")}`;
+  V().querySelectorAll(".readnav button").forEach(b => b.onclick = () => {
+    readSection = b.dataset.s; render();
+  });
+}
+
 /* ── router ─────────────────────────────────────────────────────────────── */
 function render() {
   document.querySelectorAll("#side .nav").forEach(b => {
@@ -1275,6 +1437,7 @@ function render() {
   else if (v === "readiness") vReadiness();
   else if (v === "ledger") vLedger();
   else if (v === "diagnostic") vDiagnostic();
+  else if (v === "read") vRead();
   else if (v === "settings") vSettings();
   else vSession();
   window.scrollTo(0, 0);
@@ -1286,6 +1449,6 @@ document.querySelectorAll("#side .nav").forEach(b => b.onclick = () => {
 });
 // Theme is the one per-viewer convenience kept in browser storage, so the page paints in
 // the right theme before the store answers. Progress never goes here (spec §8).
-try { const t = localStorage.getItem("evp-theme"); if (t) S.meta.theme = t === "system" ? null : t; } catch (e) {}
+try { const t = localStorage.getItem("evp-theme"); if (t) S.meta.theme = t; } catch (e) {}
 applyTheme();
 boot();
